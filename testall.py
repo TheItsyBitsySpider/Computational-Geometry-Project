@@ -1,4 +1,5 @@
 from src.PlaneSweepRasterizer import Rasterizer
+from src.display import Screen
 import numpy as np
 if __name__=="__main__":
     # kx3x3 matrix of triangles and their points
@@ -7,4 +8,8 @@ if __name__=="__main__":
     ])
 
     raster = Rasterizer(triangles)
+    disp = Screen()
     print(raster)
+    out = raster.rasterize()
+    print(out)
+    disp.display(out)
