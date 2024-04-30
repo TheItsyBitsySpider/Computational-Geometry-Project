@@ -1,5 +1,7 @@
 import numpy as np
 from src.SweepStatus import SweepStatus, SweepEvent, SweepEntry
+from queue import LifoQueue
+
 class Rasterizer:
 
     def __init__(self, triangles, resx:int = 640, resy:int=480) -> None:
@@ -48,9 +50,9 @@ class Rasterizer:
             self.sweepline.addevent(
                 triangle[0,0],
                 SweepEvent(
-                    [i,0],
-                    [i,0],
-                    [i,1],
+                    point = [i,0],
+                    line1 = [i,0],
+                    line2 = [i,1],
                     line1start= True,
                     line2start= True
             ))
@@ -58,9 +60,9 @@ class Rasterizer:
             self.sweepline.addevent(
                 triangle[1,0],
                 SweepEvent(
-                    [i,1],
-                    [i,1],
-                    [i,2],
+                    point = [i,1],
+                    line1 = [i,0],
+                    line2 = [i,2],
                     line1end= True,
                     line2start= True
             ))
@@ -68,9 +70,9 @@ class Rasterizer:
             self.sweepline.addevent(
                 triangle[2,0],
                 SweepEvent(
-                    [i,2],
-                    [i,0],
-                    [i,2],
+                    point=[i,2],
+                    line1=[i,1],
+                    line2=[i,2],
                     line1end= True,
                     line2end= True
             ))
@@ -91,30 +93,68 @@ class Rasterizer:
             event = self.sweepline.nextevent() # event is (x value, SweepEvent)
             if event[1].pixelevent:
                 # Write the current pixel at sweep to the screen
+                
                 status = self.sweepline.getfullstatus(event[0])
+                colorstack = LifoQueue()
+                colorstack.put([255, 255, 255])
+                #print("PixelEvent at {}".format(i))
+                #if len(status) == 0:
+                #    print("Empty PixelEvent at {}".format(event[0]))
                 for line in reversed(status):
                     # fill all points below an area with the triangle's color
-                    # TODO: Change 40,40,40 to triangle colors
-                    screen[:((line.line[1,2]) + line.line[0,2])*self.resy/10., i] = [40,40,40]
+                    if line.topline == True: #TODO: Chance this to an array given with the triangles
+                        colorstack.put([40,40,40])
+                    else:
+                        colorstack.get()
+                    #print("Writing to ({}, {})".format(int((self.resx*line.line[1,2]) + line.line[0,2])*self.resy//10, int(event[0]*self.resx//10)))
+                    #print(line.line)
+                    color = colorstack.get()
+                    for y in range(int((event[0]*line.line[1,1] + line.line[0,1])*self.resy/10.), -1, -1):
+                        screen[y, int(event[0]*self.resx//10)] = color
+                        #print("Writing to ({}, {})".format(y, int(event[0]*self.resx//10)))
+                    colorstack.put(color)
+                    #screen[:int((event[0]*line.line[1,2]) + line.line[0,2])*self.resy//10, int(event[0]*self.resx//10)].fill(40)
                     pass
+                
                 
             else:
                 # Update Sweepline status
                 # TODO: Add subfunctions for determining line intersections
+                print("{} of length {}".format(self.sweepline.getfullstatus(event[0]), len(self.sweepline.getfullstatus(event[0]))))
                 line1 = self.lines[event[1].line1[0], event[1].line1[1]]
                 line2 = self.lines[event[1].line2[0], event[1].line2[1]]
                 if event[1].line1start:
+                    print("Adding line 1")
                     self.sweepline.addstatus(SweepEntry(
                         line=line1,
                         lineindex=event[1].line1,
                         triangleindex=event[1].point[0],
                         # If either this is the first node or it's a continuation of a top line, this is a top line
-                        # TODO: Fix the sweepline status not preserving top line status
-                        topline= True if event[1].line2start and line1[1] > line2[1] else event[1].topline
+                        
+                        # A line is a top line if either it is the top line at the start or is the point with higher slope leading to it
+                        topline= True if event[1].line2start and line1[1,1] > line2[1,1] else (self.lines[event[1].point[0],0,1,2] > self.lines[event[1].point[0],1,1,2]) == (event[1].point[1]==1) and event[1].point[1] != 0
                         ))
+                    
+                else:
+                    print("Removing line 1")
+                    self.sweepline.removestatus(event[1].line1)
+                if event[1].line2start:
+                    print("Adding line 2")
+                    self.sweepline.addstatus(SweepEntry(
+                        line=line2,
+                        lineindex=event[1].line2,
+                        triangleindex=event[1].point[0],
+                        # If either this is the first node or it's a continuation of a top line, this is a top line
+                        
+                        # A line is a top line if either it is the top line at the start or is the point with higher slope leading to it
+                        topline= True if event[1].line1start and line1[1,1] < line2[1,1] else (self.lines[event[1].point[0],0,1,2] > self.lines[event[1].point[0],1,1,2]) == (event[1].point[1]==1) and event[1].point[1] != 0
+                        ))
+                else:
+                    print("Removing line 2")
+                    self.sweepline.removestatus(event[1].line2)
                 # TODO: Finish the new line processes
                 
-                pass
+        print(self.sweepline.getfullstatus(event[0]))
         return screen
         
         

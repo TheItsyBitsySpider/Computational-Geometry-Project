@@ -51,23 +51,27 @@ class SweepStatus:
     def addevent(self, x:float, value:SweepEvent) -> None:
         self.events.put((x, value))
 
-    def nextevent(self) -> SweepEvent:
+    def nextevent(self) -> tuple[int, SweepEvent]:
         return self.events.get()
     
 
     def getfullstatus(self, x:float) -> list[SweepEntry]:
         # Sort the list by y value at the given x
-        ret = self.status.sort(key=lambda entry: (entry.line[1,2] * x) + entry.line[0,2])
-        return [] if ret == None else ret
+        self.status.sort(key=lambda entry: (entry.line[1,2] * x) + entry.line[0,2])
+        return self.status
     
     #def getstatus(self, x) -> list: # Returns the line? And maybe what triangle it's attached to?
     #    return self.status[x]
     
     def addstatus(self, value:SweepEntry) -> None:
-        self.status.insert(value)
+        self.status.append(value)
 
     def removestatus(self, x) -> SweepEvent:
-        return self.status.pop(x)
+        for i, stat in enumerate(self.status):
+            if stat.lineindex == x:
+                return self.status.pop(i)
+        print("ERROR: Failed to find matching edge in SweepStatus.removestatus")
+        return None
     
     def emptyqueue(self) -> bool:
         return self.events.empty()

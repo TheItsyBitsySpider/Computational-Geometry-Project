@@ -6,5 +6,5 @@ class Screen():
 
 
     def display(self, img:np.ndarray):
-        cv2.imshow("Rasterization", img)
-        cv2.waitKey(1)
+        cv2.imshow("Rasterization", img[::-1])
+        cv2.waitKey(100000)

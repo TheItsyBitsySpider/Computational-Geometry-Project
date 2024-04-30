@@ -4,12 +4,13 @@ import numpy as np
 if __name__=="__main__":
     # kx3x3 matrix of triangles and their points
     triangles = np.array([
-        [[0,0,0], [1,0,0], [2,1,1]]
+        [[0,0,0], [1,0,0], [2,1,1]],
+        [[8.5,9.5,2], [9,4,1], [9.75,8,3]]
     ])
 
     raster = Rasterizer(triangles)
     disp = Screen()
     print(raster)
     out = raster.rasterize()
-    print(out)
+    print(out.shape)
     disp.display(out)
