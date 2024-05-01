@@ -5,6 +5,12 @@ class Screen():
         pass
 
 
-    def display(self, img:np.ndarray):
-        cv2.imshow("Rasterization", img[::-1])
-        cv2.waitKey(100000)
+    def display(self, img:np.ndarray, short=False):
+        # cv2 flips the image and is bgr
+        cv2.imshow("Rasterization", img[::-1,:,::-1])
+        if short:
+            cv2.waitKey(1)
+        else:
+            cv2.waitKey(100000)
+
+    

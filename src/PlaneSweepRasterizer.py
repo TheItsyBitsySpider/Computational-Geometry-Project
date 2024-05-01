@@ -11,14 +11,21 @@ class Rasterizer:
         self.resx = resx
         self.resy = resy
         self.background = skybox
+        self.triangles = triangles
         # TODO: Make sure there's no points vertical to one another
         # TODO: Sort each triangle internally by x point value
+        
 
-        self.triangles = triangles
+
+    def setlinesandplanes(self):
+        for i in range(len(self.triangles)):
+            #print(type(self.triangles[i]))
+            self.triangles[i] = sorted(np.array(self.triangles[i]), key=lambda tri: tri[0])
+        #print(self.triangles)
         # generate lines
         # Lines are stored in the format [AB, AC, BC]
-        self.lines = np.zeros((len(triangles), 3, 2, 3))
-        for i, triangle in enumerate(triangles):
+        self.lines = np.zeros((len(self.triangles), 3, 2, 3))
+        for i, triangle in enumerate(self.triangles):
             # Set the first line's slope, normalized to x
             self.lines[i][0][1] = (triangle[1] - triangle[0])/(triangle[1][0]-triangle[0][0])
             # Set the first line's position, normalized to x=0
@@ -36,18 +43,19 @@ class Rasterizer:
         
         
         # generate planes
-        self.planes = np.zeros((len(triangles), 4))
-        for i, triangle in enumerate(triangles):
+        self.planes = np.zeros((len(self.triangles), 4))
+        for i, triangle in enumerate(self.triangles):
             self.planes[i,0:3] = np.cross(self.lines[i,0,1], self.lines[i,1,1])
             self.planes[i,3] = -sum(triangle[1] * self.planes[i,0:3])
 
 
-        print(self.lines)
-        print(self.planes)
+        #print(self.lines)
+        #print(self.planes)
         pass
 
 
     def rasterize(self) -> np.ndarray:
+        self.setlinesandplanes()
         # Form the sweep plane
         self.sweepline = SweepStatus()
         for i, triangle in enumerate(self.triangles):
@@ -99,33 +107,6 @@ class Rasterizer:
             event = self.sweepline.nextevent() # event is (x value, SweepEvent)
             if event[1].pixelevent:
                 # Write the current pixel at sweep to the screen
-                '''
-                status = self.sweepline.getfullstatus(event[0])
-                colorstack = LifoQueue()
-                colorstack.put([255, 255, 255])
-                
-                #print("PixelEvent at {}".format(i))
-                #if len(status) == 0:
-                #    print("Empty PixelEvent at {}".format(event[0]))
-                for line in reversed(status):
-                    # fill all points below an area with the triangle's color
-                    if line.topline == True: #TODO: Chance this to an array given with the triangles
-                        colorstack.put([40,40,40])
-                    else:
-                        colorstack.get()
-                    #print("Writing to ({}, {})".format(int((self.resx*line.line[1,2]) + line.line[0,2])*self.resy//10, int(event[0]*self.resx//10)))
-                    #print(line.line)
-                    color = colorstack.get()
-                    for y in range(int((event[0]*line.line[1,1] + line.line[0,1])*self.resy/10.), -1, -1):
-                        screen[y, int(event[0]*self.resx//10)] = color
-                        #print("Writing to ({}, {})".format(y, int(event[0]*self.resx//10)))
-                    colorstack.put(color)
-                    #screen[:int((event[0]*line.line[1,2]) + line.line[0,2])*self.resy//10, int(event[0]*self.resx//10)].fill(40)
-                    pass
-                    '''
-
-                # Attempt 2 at coloring
-                # 1st attempt doesn't account for overlaps
                 # This technically makes this part of the algorithm O(nwlogn+nwh)
                 x = event[0]
                 status = self.sweepline.getfullstatus(event[0])
@@ -173,11 +154,11 @@ class Rasterizer:
             else:
                 # Update Sweepline status
                 # TODO: Add subfunctions for determining line intersections
-                print("{} of length {}".format(self.sweepline.getfullstatus(event[0]), len(self.sweepline.getfullstatus(event[0]))))
+                #print("{} of length {}".format(self.sweepline.getfullstatus(event[0]), len(self.sweepline.getfullstatus(event[0]))))
                 line1 = self.lines[event[1].line1[0], event[1].line1[1]]
                 line2 = self.lines[event[1].line2[0], event[1].line2[1]]
                 if event[1].line1start:
-                    print("Adding line 1")
+                    #print("Adding line 1")
                     self.sweepline.addstatus(SweepEntry(
                         line=line1,
                         lineindex=event[1].line1,
@@ -189,10 +170,10 @@ class Rasterizer:
                         ))
                     
                 else:
-                    print("Removing line 1")
+                    #print("Removing line 1")
                     self.sweepline.removestatus(event[1].line1)
                 if event[1].line2start:
-                    print("Adding line 2")
+                    #print("Adding line 2")
                     self.sweepline.addstatus(SweepEntry(
                         line=line2,
                         lineindex=event[1].line2,
@@ -203,11 +184,21 @@ class Rasterizer:
                         topline= True if event[1].line1start and line1[1,1] < line2[1,1] else (self.lines[event[1].point[0],0,1,2] > self.lines[event[1].point[0],1,1,2]) == (event[1].point[1]==1) and event[1].point[1] != 0
                         ))
                 else:
-                    print("Removing line 2")
+                    #print("Removing line 2")
                     self.sweepline.removestatus(event[1].line2)
                 # TODO: Finish the new line processes
                 
-        print(self.sweepline.getfullstatus(event[0]))
+        #print(self.sweepline.getfullstatus(event[0]))
         return screen
         
+
+    def rotate(self, rotationmatrix):
+        if len(rotationmatrix) != 3 or len(rotationmatrix[0]) != 3:
+            return False
         
+        for i, tri in enumerate(self.triangles):
+            for j in range(3):
+                self.triangles[i,j,0] -= 5.
+                self.triangles[i,j] = np.matmul(rotationmatrix, self.triangles[i,j])
+                self.triangles[i,j,0] += 5.
+        return True
