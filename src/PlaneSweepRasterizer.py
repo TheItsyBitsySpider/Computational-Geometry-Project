@@ -90,8 +90,9 @@ class Rasterizer:
             ))
 
         for i in range(self.resx):
+            x:np.float128 = 10*i/self.resx
             self.sweepline.addevent(
-                10*i/self.resx, 
+                x, 
                 SweepEvent(
                     i,
                     pixelevent=True
@@ -199,6 +200,8 @@ class Rasterizer:
         for i, tri in enumerate(self.triangles):
             for j in range(3):
                 self.triangles[i,j,0] -= 5.
+                self.triangles[i,j,1] -= 5.
                 self.triangles[i,j] = np.matmul(rotationmatrix, self.triangles[i,j])
                 self.triangles[i,j,0] += 5.
+                self.triangles[i,j,1] += 5.
         return True
