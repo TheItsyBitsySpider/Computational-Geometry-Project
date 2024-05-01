@@ -1,12 +1,16 @@
 import numpy as np
 from src.SweepStatus import SweepStatus, SweepEvent, SweepEntry
 from queue import LifoQueue
+from math import inf
+import cv2
 
 class Rasterizer:
 
-    def __init__(self, triangles, resx:int = 640, resy:int=480) -> None:
+    def __init__(self, triangles, colors, resx:int = 640, resy:int=480, skybox = [255,255,255]) -> None:
+        self.colors = colors
         self.resx = resx
         self.resy = resy
+        self.background = skybox
         # TODO: Make sure there's no points vertical to one another
         # TODO: Sort each triangle internally by x point value
 
@@ -35,7 +39,7 @@ class Rasterizer:
         self.planes = np.zeros((len(triangles), 4))
         for i, triangle in enumerate(triangles):
             self.planes[i,0:3] = np.cross(self.lines[i,0,1], self.lines[i,1,1])
-            self.planes[i,3] = -sum((triangle[1]-triangle[0]) * triangle[0])
+            self.planes[i,3] = -sum(triangle[1] * self.planes[i,0:3])
 
 
         print(self.lines)
@@ -89,14 +93,17 @@ class Rasterizer:
 
         # Sweep the space & print
         screen = np.full((self.resy, self.resx, 3), 255, dtype=np.uint8)
+        
+        screen[:,:] = self.background
         while not self.sweepline.emptyqueue():
             event = self.sweepline.nextevent() # event is (x value, SweepEvent)
             if event[1].pixelevent:
                 # Write the current pixel at sweep to the screen
-                
+                '''
                 status = self.sweepline.getfullstatus(event[0])
                 colorstack = LifoQueue()
                 colorstack.put([255, 255, 255])
+                
                 #print("PixelEvent at {}".format(i))
                 #if len(status) == 0:
                 #    print("Empty PixelEvent at {}".format(event[0]))
@@ -115,7 +122,53 @@ class Rasterizer:
                     colorstack.put(color)
                     #screen[:int((event[0]*line.line[1,2]) + line.line[0,2])*self.resy//10, int(event[0]*self.resx//10)].fill(40)
                     pass
+                    '''
+
+                # Attempt 2 at coloring
+                # 1st attempt doesn't account for overlaps
+                # This technically makes this part of the algorithm O(nwlogn+nwh)
+                x = event[0]
+                status = self.sweepline.getfullstatus(event[0])
+                if status == []:
+                    continue #if the status is empty, leave column blank
+                activetriangles = {}
                 
+                nexttriangleindex = 0
+                nexty = status[0].line[0,1] + x * status[0].line[1,1]
+                
+                for y in range(self.resy):
+                    while y*10/self.resy >= nexty:
+                        if status[nexttriangleindex].triangle in activetriangles.keys():
+                            try:
+                                activetriangles.pop(status[nexttriangleindex].triangle)
+                            except:
+                                pass
+                        else:
+                            activetriangles[status[nexttriangleindex].triangle] = status[nexttriangleindex]
+                        nexttriangleindex += 1
+                        if nexttriangleindex >= len(status):
+                            nexttriangleindex -= 1
+                            nexty = inf
+                            
+                            break
+                        nexty = status[nexttriangleindex].line[0,1] + x * status[nexttriangleindex].line[1,1]
+
+                    if activetriangles == {}:
+                        screen[y, int(x*self.resx//10)] = self.background
+                        continue # escape case for empty cell
+
+                    pixelheight = -inf
+                    for t in activetriangles.items():
+                        
+                        # ax + by + cz + d = 0
+                        # (- ax - by - d)/c =z
+                        plane = self.planes[t[1].triangle]
+                        h = (-plane[0]*x - plane[1]*y*10/self.resy - plane[3])/plane[2]
+                        if h > pixelheight:
+                            pixelheight=h
+                            screen[y, int(x*self.resx//10)] = self.colors[t[1].triangle]
+                
+                #cv2.imshow("Rasterization", screen[::-1])
                 
             else:
                 # Update Sweepline status
