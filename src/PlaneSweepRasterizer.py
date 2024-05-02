@@ -21,6 +21,10 @@ class Rasterizer:
         for i in range(len(self.triangles)):
             #print(type(self.triangles[i]))
             self.triangles[i] = sorted(np.array(self.triangles[i]), key=lambda tri: tri[0])
+            if self.triangles[i,0,0] == self.triangles[i,1,0] or self.triangles[i,0,0] == self.triangles[i,2,0] or self.triangles[i,1,0] == self.triangles[i,2,0]:
+                print("ERROR: Only x-monotonic triangles are allowed")
+                print(self.triangles[i])
+                return False
         #print(self.triangles)
         # generate lines
         # Lines are stored in the format [AB, AC, BC]
@@ -51,11 +55,12 @@ class Rasterizer:
 
         #print(self.lines)
         #print(self.planes)
-        pass
+        return True
 
 
     def rasterize(self) -> np.ndarray:
-        self.setlinesandplanes()
+        if not self.setlinesandplanes():
+            return None
         # Form the sweep plane
         self.sweepline = SweepStatus()
         for i, triangle in enumerate(self.triangles):
