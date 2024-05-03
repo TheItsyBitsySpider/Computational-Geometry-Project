@@ -115,6 +115,7 @@ class Rasterizer:
                 # Write the current pixel at sweep to the screen
                 # This technically makes this part of the algorithm O(nwlogn+nwh)
                 x = event[0]
+                
                 status = self.sweepline.getfullstatus(event[0])
                 if status == []:
                     continue #if the status is empty, leave column blank
@@ -192,9 +193,9 @@ class Rasterizer:
                 else:
                     #print("Removing line 2")
                     self.sweepline.removestatus(event[1].line2)
-                # TODO: Finish the new line processes
+                #self.sweepline.sortstatus(event[0])
                 
-        #print(self.sweepline.getfullstatus(event[0]))
+        
         return screen
         
 

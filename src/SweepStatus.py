@@ -55,10 +55,9 @@ class SweepStatus:
         return self.events.get()
     
 
+
     def getfullstatus(self, x:float) -> list[SweepEntry]:
-        # Sort the list by y value at the given x
-        self.status.sort(key=lambda entry: (entry.line[1,1] * x) + entry.line[0,1])
-        return self.status
+        return sorted(self.status, key=lambda entry: (entry.line[1,1] * x) + entry.line[0,1])
     
     #def getstatus(self, x) -> list: # Returns the line? And maybe what triangle it's attached to?
     #    return self.status[x]
