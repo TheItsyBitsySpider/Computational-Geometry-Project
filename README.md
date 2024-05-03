@@ -5,7 +5,7 @@ Written by Cole Salvato (ColeSalvato@gmail.com)
 
 ### Installation
 
-This project is written in python 3.10 and cannot be guaranteed to work in any other versions. to install required libraries, navigate to this directory and run
+This project is written in python 3.10 and cannot be guaranteed to work in any other versions. To install required libraries, navigate to this directory and run
 
 ```pip install -r requirements.txt```
 
